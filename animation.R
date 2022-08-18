@@ -20,7 +20,6 @@ pb <- txtProgressBar(
 
 # 3D Drawing ----
 shade3d(oh3d(), color = "red")
-rgl.snapshot(filename, fmt = "png", top = TRUE)
 rgl.bringtotop()
 
 view3d(0, 20)
@@ -31,10 +30,10 @@ setwd(tmpdir)
 
 for (i in 1:n_iter) {
   view3d(i, 20)
-  filename <- paste("pic", formatC(i, digits = 1, flag = "0"), ".svg", sep = "")
+  filename <- paste("pic", formatC(i, digits = 1, flag = "0"), ".png", sep = "")
   
-  # snapshot3d(filename, webshot = as.logical(Sys.getenv("RGL_USE_WEBSHOT", "FALSE")))
-  rgl.postscript(filename, fmt="svg")
+  # print(sprintf("Saving file to: %s", filename))
+  snapshot3d(filename, webshot = as.logical(Sys.getenv("RGL_USE_WEBSHOT", "FALSE")))
 
   # Sets the progress bar to the current state
   setTxtProgressBar(pb, i)

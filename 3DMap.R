@@ -123,7 +123,7 @@ elev_matrix |>
 # Plot the route in 3D
 x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
 y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
-z <- gpx$ele
+z <- gpx$ele / (zscale - .05)
 zscale <- 10
 
 # Camera movements, borrowed from
@@ -150,6 +150,8 @@ pb <- txtProgressBar(
   char = "="
 ) # Character used to create the bar
 
+# To plot the entire track: 
+# rgl::lines3d(x, z, -y, color='red', add=TRUE)
 
 for (i in 1:n_iter) {
   rgl::lines3d(
@@ -167,7 +169,7 @@ for (i in 1:n_iter) {
     zoom = zoomvecfull[i],
     fov = 50
   )
-  rgl::snapshot3d(paste0(i, ".png"))
+  rgl::snapshot3d(paste0(i, ".png"))  # TODO: This fails! Black snapshots!
   rgl.pop(id = rgl.ids()$id |> max())
   
   # Sets the progress bar to the current state
