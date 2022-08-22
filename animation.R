@@ -3,7 +3,8 @@ library("rgl")
 
 # SETUP -----
 # Temporary dir setup
-tmpdir <- tempdir()
+# tmpdir <- tempdir()
+tmpdir <- './Track'
 print(sprintf("Saving results in: %s", tmpdir))
 
 

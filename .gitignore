@@ -1,5 +1,10 @@
 Track/
 Images/
 
+.Rhistory
+.RData
+
 *.gpx
 .env
+
+elevation.tif

@@ -176,4 +176,12 @@ z <- extract(elev_img, gpx[, c(3, 4)]) / (zscale - .08)
 
 # Plot the route in 3D -----
 rgl::lines3d(x, z, -y, color = "red", add = TRUE)
+
+# fanzy stuff
+render_camera(fov = 0, theta = 60, zoom = 0.75, phi = 45)
+render_scalebar(limits=c(0, 5, 10),label_unit = "km",position = "W", y=50,
+                scale_length = c(0.33,1))
+render_compass(position = "E")
+render_snapshot(clear=TRUE)
+
 rglwidget()

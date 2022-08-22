@@ -123,14 +123,13 @@ elev_matrix |>
 # Plot the route in 3D
 x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
 y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
-z <- gpx$ele / (zscale - .05)
-zscale <- 10
+z <- gpx$ele / (10 - .05)
 
 # Camera movements, borrowed from
 # https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
-phivechalf <- 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
+phivechalf <- 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))  # original: 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
 phivecfull <- c(phivechalf, rev(phivechalf))
-thetavec <- 90 + 60 * sin(seq(0, 359, length.out = 360) * pi / 180)
+thetavec <- -90 + 60 * sin(seq(0, 359, length.out = 360) * pi / 180)
 zoomvec <- 0.35 + 0.2 * 1 / (1 + exp(seq(-5, 20, length.out = 180)))
 zoomvecfull <- c(zoomvec, rev(zoomvec))
 
@@ -150,14 +149,14 @@ pb <- txtProgressBar(
   char = "="
 ) # Character used to create the bar
 
-# To plot the entire track: 
-# rgl::lines3d(x, z, -y, color='red', add=TRUE)
 
+n_points <- length(gpx$lat)
 for (i in 1:n_iter) {
+  p_range <- 1:ceiling((n_points / 360) * i * 10)  # why this? x[1:ceiling((1555 / 360) * i)]
   rgl::lines3d(
-    x[1:ceiling((1555 / 360) * i)],
-    z[1:ceiling((1555 / 360) * i)] / (zscale - .05),
-    -y[1:ceiling((1555 / 360) * i)],
+    x[p_range],
+    z[p_range],
+    -y[p_range],
     color = "red",
     lwd = 4,
     smooth = T,
@@ -175,5 +174,8 @@ for (i in 1:n_iter) {
   # Sets the progress bar to the current state
   setTxtProgressBar(pb, i)
 }
+
+# To plot the entire track: 
+rgl::lines3d(x, z, -y, color='red', add=TRUE)
 
 setwd(prev_wd)
