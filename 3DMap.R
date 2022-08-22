@@ -168,7 +168,7 @@ for (i in 1:n_iter) {
     zoom = zoomvecfull[i],
     fov = 50
   )
-  rgl::snapshot3d(paste0(i, ".png"))  # TODO: This fails! Black snapshots!
+  rgl::snapshot3d(paste0(sprintf("%02d.png", i)))
   rgl.pop(id = rgl.ids()$id |> max())
   
   # Sets the progress bar to the current state
