@@ -38,8 +38,17 @@ gpx <- gpx.df$tracks |>
 
 
 # Convert column classes
+gpx_ncols <- length(colnames(gpx))
+if (gpx_ncols == 5) {
+  colnames(gpx) <- c("lon", "lat", "ele", "time", "temp")
+} else if (gpx_ncols == 4) {
+  colnames(gpx) <- c("lon", "lat", "ele", "time")
+} else {
+  print(sprintf("Incompatible number of columns detected (%d)", gpx_ncols))
+  quit(status=1)
+}
+print("Done reading GPX file!") 
 gpx[1:3] <- as.numeric(unlist(gpx[1:3]))
-colnames(gpx) <- c("lon", "lat", "ele", "time", "temp")
 
 # Find Bounding Box
 lat_min <- min(gpx$lat) * 0.999
@@ -123,7 +132,7 @@ elev_matrix |>
 # Plot the route in 3D
 x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
 y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
-z <- gpx$ele / (10 - .05)
+z <- gpx$ele / 9.45
 
 # Camera movements, borrowed from
 # https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
@@ -157,7 +166,7 @@ for (i in 1:n_iter) {
     x[p_range],
     z[p_range],
     -y[p_range],
-    color = "red",
+    color = "orange",
     lwd = 4,
     smooth = T,
     add = T
@@ -176,6 +185,6 @@ for (i in 1:n_iter) {
 }
 
 # To plot the entire track: 
-rgl::lines3d(x, z, -y, color='red', add=TRUE)
+rgl::lines3d(x, z, -y, color='orange', add=TRUE)
 
 setwd(prev_wd)
