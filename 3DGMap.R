@@ -20,7 +20,9 @@ if (gmaps_key == "") {
   stop("Missing Google Maps API key. Please set the 'GMAPS_KEY' env.var")
 }
 register_google(key = gmaps_key, day_limit = 2)
-dir.create("Images")
+
+img_dir <- "Images"
+dir.create(img_dir)
 
 
 # Read GPX: Get Elevation, Latitude, and Longitude in a dataframe  -----
@@ -54,14 +56,13 @@ gpx$ele <- as.numeric(gpx$ele)
 gpx$temp <- as.numeric(gpx$temp)
 gpx$lat <- as.numeric(gpx$lat)
 gpx$lon <- as.numeric(gpx$lon)
-
+# Parse time
 gpx$time <- sub("T", " ", gpx$time)
 gpx$time <- sub("\\+00:00", "", gpx$time)
 gpx$time <- as.POSIXlt(gpx$time)
 
-
+# Bounding Box
 gpx <- gpx[, c("time", "temp", "lon", "lat", "ele")]
-
 lat_min <- min(gpx$lat)
 lat_max <- max(gpx$lat)
 long_min <- min(gpx$lon)
@@ -74,13 +75,13 @@ print(sprintf(
 ))
 
 # Get elevation data ---------
-elevation_tif_file <- "Images/elevation.tif"
+elevation_tif_file <- sprintf("%s/elevation.tif", img_dir)
 
 ex.df <- data.frame(x = c(long_min, long_max), y = c(lat_min, lat_max))
 prj_dd <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-elev_img <- get_elev_raster(ex.df, prj = prj_dd, z = 12, clip = "bbox")
+elev_img <- get_elev_raster(ex.df, prj = prj_dd, z = 12, clip = "tile")
 elev_tif <- raster::writeRaster(elev_img, elevation_tif_file, overwrite = TRUE)
-dim <- dim(elev_tif)
+img_dim <- dim(elev_tif)
 elev_matrix <- matrix(
   raster::extract(elev_img, raster::extent(elev_img), buffer = 1000),
   nrow = ncol(elev_img), ncol = nrow(elev_img)
@@ -90,21 +91,13 @@ elev_matrix <- matrix(
 # To know more: https://developers.google.com/maps/documentation
 long_cen <- (((long_max - long_min) / 2) + long_min)
 lat_cen <- ((lat_max - lat_min) / 2) + lat_min
-mt_mit_map <- get_googlemap(
+
+ggplot <- get_googlemap(
   center = c(lon = long_cen, lat = lat_cen),
   zoom = 12,
-  maptype = "satellite",
+  maptype = "hybrid",  # satellite
   color = "color"
-)
-
-# Plot overlay image and crop to the correct dimensions
-overlay_file <- "Images/overlay_image.png"
-png(overlay_file,
-  width = dim[2], height = dim[1],
-  units = "px", type = "cairo-png"
-)
-
-ggmap(mt_mit_map) +
+) |> ggmap() +
   scale_x_continuous(limits = c(long_min, long_max), expand = c(0, 0)) +
   scale_y_continuous(limits = c(lat_min, lat_max), expand = c(0, 0)) +
   theme(
@@ -113,10 +106,17 @@ ggmap(mt_mit_map) +
     axis.ticks = element_blank(),
     plot.margin = unit(c(0, 0, -1, -1), "lines")
   ) +
-  xlab("") +
+  xlab("") + 
   ylab("")
 
-dev.off()
+
+# Plot overlay image and crop to the correct dimensions
+overlay_file <- sprintf("%s/overlay_image.png", img_dir)
+ggsave(overlay_file, 
+       plot=ggplot, 
+       height = img_dim[1], 
+       width = img_dim[2], 
+       units = "px")
 
 # Edit Image
 image <- image_read(overlay_file)
@@ -141,11 +141,10 @@ elev_matrix |>
   add_water(watermap, color = "imhof4") |>
   add_overlay(overlay_img, alphalayer = .9) |>
   add_shadow(raymat, max_darken = 0.5, rescale_original = TRUE) |>
-  # add_shadow(t(ambmat), max_darken = 0.5, rescale_original = TRUE) |>
+  add_shadow(t(ambmat), max_darken = 0.5, rescale_original = TRUE) |>
   plot_3d(elev_matrix, zscale = 7, 
           xlab = "x", ylab = "y", zlab = "z", decorate = TRUE)
 
-# render_snapshot("Images/3D_map_overlay.png")
 
 # Convert lat and long to rayshader grid -----------
 xmin <- elev_img@extent@xmin
@@ -159,20 +158,20 @@ x <- (gpx$lon - xmin_vec) / res(elev_img)[1] - adj_x
 y <- (gpx$lat - ymin_vec) / res(elev_img)[2] - adj_y
 z <- extract(elev_img, gpx[, c(3, 4)]) / (zscale - .08)
 
-
-# max_z_idx <- which.max(z)
-# max_px <- x[max_z_idx]
-# max_py <- y[max_z_idx]
-# render_label(elev_matrix,
-#   x = max_px,
-#   y = -max_py,
-#   z = max(z),
-#   zscale = 7,
-#   textsize = 20,
-#   linewidth = 4,
-#   text = "UP!",
-#   freetype = FALSE
-# )
+# Coordinates of the highest point
+max_z_idx <- which.max(z)
+max_px <- x[max_z_idx]
+max_py <- y[max_z_idx]
+render_label(elev_matrix,
+  x = max_px,
+  y = -max_py,
+  z = max(z),
+  zscale = 7,
+  textsize = 20,
+  linewidth = 4,
+  text = "UP!",
+  freetype = FALSE
+)
 
 # Plot the route in 3D -----
 rgl::lines3d(x, z, -y, color = "red", add = TRUE)
@@ -182,6 +181,6 @@ render_camera(fov = 0, theta = 60, zoom = 0.75, phi = 45)
 render_scalebar(limits=c(0, 5, 10),label_unit = "km",position = "W", y=50,
                 scale_length = c(0.33,1))
 render_compass(position = "E")
-render_snapshot(clear=TRUE)
+render_snapshot(clear=FALSE)
 
 rglwidget()

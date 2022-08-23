@@ -5,6 +5,7 @@ Images/
 .RData
 
 *.gpx
+*.gif
+
 .env
 
-elevation.tif

@@ -61,7 +61,7 @@ elev_img <-
     z = 12,
     clip = "bbox"
   )
-elev_tif <- raster::writeRaster(elev_img, "elevation.tif", overwrite = TRUE)
+elev_tif <- raster::writeRaster(elev_img, "Track/elevation.tif", overwrite = TRUE)
 
 elev_dim <- dim(elev_tif)
 elev_matrix <- matrix(
@@ -127,7 +127,7 @@ z <- gpx$ele / (10 - .05)
 
 # Camera movements, borrowed from
 # https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
-phivechalf <- 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))  # original: 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
+phivechalf <- 60 / (1 + exp(seq(-7, 0, length.out = 180) / 2))  # original: 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
 phivecfull <- c(phivechalf, rev(phivechalf))
 thetavec <- -90 + 60 * sin(seq(0, 359, length.out = 360) * pi / 180)
 zoomvec <- 0.35 + 0.2 * 1 / (1 + exp(seq(-5, 20, length.out = 180)))
@@ -140,7 +140,7 @@ prev_wd <- getwd()
 setwd("Track")
 
 # Initializes the progress bar
-n_iter <- 36
+n_iter <- 72  # 36
 pb <- txtProgressBar(
   min = 0, # Minimum value of the progress bar
   max = n_iter, # Maximum value of the progress bar
@@ -152,7 +152,7 @@ pb <- txtProgressBar(
 
 n_points <- length(gpx$lat)
 for (i in 1:n_iter) {
-  p_range <- 1:ceiling((n_points / 360) * i * 10)  # why this? x[1:ceiling((1555 / 360) * i)]
+  p_range <- 1:ceiling((n_points / n_iter) * i)  # why this? x[1:ceiling((1555 / 360) * i)]
   rgl::lines3d(
     x[p_range],
     z[p_range],
