@@ -29,19 +29,33 @@ The R scripts r copies or have been inspired by the following repositories:
  
  ### Run
  
- To run the selected rendering script:
+ > NOTE: You can run all of the commands below with `render.sh <your-input-gpx-file>`
  
- ```bash
- source('3DMapping.R')  # Will prompt for the GPX file as input
- ```
  
- This script will save a series of renders as pngs in the `Track` directory.
- Then, to compose a GIF from all renders:
+ <details>
+  <summary>Show me the commands!</summary>
+  
+  To run the selected rendering script from the `R console`:
+   
+   ```bash
+   source('3DMapping.R')  # Will prompt for the GPX file as input
+   ```
+   
+   This script will save a series of renders as pngs in the `Track` directory.
+   Then, to compose a GIF from all renders:
+   
+   ```bash
+   cd Track
+   convert -delay 2 -loop 0 *.png output.gif
+   
+   # Alternatively (faster but less quality):
+   ffmpeg -framerate 5 -y -i %02d.png output.gif
+   
+   # To convert from GIF to video in MP4
+   ffmpeg -i output.gif \
+    -movflags faststart -pix_fmt yuv420p \
+    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" output.mp4
+   ```
+     
+</details>
  
- ```bash
- cd Track
- convert -delay 2 -loop 0 *.png output.gif
- 
- # Alternatively (faster but less quality):
- ffmpeg -framerate 5 -y -i %02d.png output_2.gif
- ```

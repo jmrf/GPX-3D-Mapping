@@ -8,8 +8,8 @@ library(plotKML)
 library(dplyr)
 library(magick)
 
-source("arcgis_map_api.R")
-source("image_size.R")
+source("helpers/arcgis_map_api.R")
+source("helpers/image_size.R")
 
 # Setup and functions -------------------------------------------------------
 options(rgl.printRglwidget = TRUE)
@@ -26,11 +26,14 @@ yvec <- function(x) {
   (x - ymin_vec[length(x)]) / res(elev_img)[2]
 }
 
-# Retrieve route and elevation data -----------------------------------------
 
-input_gpx_file <- readline("Introduce GPX input path.\t")
+# Read gpx file path from input ----
+# input_gpx_file <- readline("Introduce GPX input path.\t")
+args<-commandArgs(TRUE)
+input_gpx_file <- args[1]
 print(sprintf("Reading GPX file: %s", input_gpx_file))
 
+# Retrieve route and elevation data ----
 gpx.df <- readGPX(input_gpx_file)
 gpx <- gpx.df$tracks |>
   unlist(recursive = FALSE) |>
