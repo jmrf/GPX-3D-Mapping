@@ -1,4 +1,4 @@
-# Libraries and functions -------------------------------------------------
+# Libraries and helpers ----
 library(elevatr)
 library(rayshader)
 library(imager)
@@ -11,7 +11,7 @@ library(magick)
 source("helpers/arcgis_map_api.R")
 source("helpers/image_size.R")
 
-# Setup and functions -------------------------------------------------------
+# Setup and functions ----
 options(rgl.printRglwidget = TRUE)
 
 # Convert lat and long to rayshader grid coordinates
@@ -28,8 +28,9 @@ yvec <- function(x) {
 
 
 # Read gpx file path from input ----
-# input_gpx_file <- readline("Introduce GPX input path.\t")
-args<-commandArgs(TRUE)
+# Alternatively, read from input:
+# > input_gpx_file <- readline("Introduce GPX input path.\t")
+args <- commandArgs(TRUE)
 input_gpx_file <- args[1]
 print(sprintf("Reading GPX file: %s", input_gpx_file))
 
@@ -47,10 +48,10 @@ if (gpx_ncols == 5) {
 } else if (gpx_ncols == 4) {
   colnames(gpx) <- c("lon", "lat", "ele", "time")
 } else {
-  print(sprintf("Incompatible number of columns detected (%d)", gpx_ncols))
-  quit(status=1)
+  print(sprintf("Incompatible number of columns detected (%d).", gpx_ncols))
+  quit(status = 1)
 }
-print("Done reading GPX file!") 
+print("Done reading GPX file!")
 gpx[1:3] <- as.numeric(unlist(gpx[1:3]))
 
 # Find Bounding Box
@@ -68,14 +69,16 @@ ex.df <- data.frame(
 
 prj_dd <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 elev_img <-
-  get_elev_raster(ex.df,
+  get_elev_raster(
+    ex.df,
     prj = prj_dd,
     z = 12,
     clip = "bbox"
   )
 elev_tif <- raster::writeRaster(elev_img, "Track/elevation.tif", overwrite = TRUE)
-
 elev_dim <- dim(elev_tif)
+
+# elevation matrix from the Raster
 elev_matrix <- matrix(
   raster::extract(elev_img, raster::extent(elev_img), buffer = 1000),
   nrow = ncol(elev_img),
@@ -88,32 +91,29 @@ bbox <- list(
   p2 = list(long = long_min, lat = lat_max)
 )
 
-# Create overlay from satellite image ------------------------------------
+# Create overlay from satellite image ----
 image_size <- define_image_size(bbox, 1200)
 overlay_img <- get_arcgis_map_image(
   bbox,
-  map_type = "World_Imagery",
+  map_type = "World_Topo_Map", # World_Imagery
   width = image_size$width,
   height = image_size$height
 ) |> png::readPNG()
 
-# Create the 3D Map -------------------------------------------------------
+# Create the 3D Map ----
 
 # Calculate rayshader layers using elevation data
 ambmat <- ambient_shade(elev_matrix, zscale = 8)
 raymat <- ray_shade(elev_matrix, zscale = 8, lambert = TRUE)
 
-# Create RGL object
+# Create RGL object and plot
 rgl::clear3d()
 
 elev_matrix |>
   sphere_shade(texture = "imhof4") |>
-  add_overlay(overlay_img, alphalayer = 0.9) |>
+  add_overlay(overlay = overlay_img, alphalayer = 0.9) |>
   add_shadow(raymat, max_darken = 0.5, rescale_original = TRUE) |>
-  add_shadow(t(ambmat),
-    max_darken = 0.5,
-    rescale_original = TRUE
-  ) |>
+  # add_shadow(ambmat, max_darken = 0.5, rescale_original = TRUE) |>
   plot_3d(
     elev_matrix,
     zscale = 10,
@@ -130,7 +130,7 @@ elev_matrix |>
 # render_label(elev_matrix, x = xvec(12.392638), y = yvec(47.123220), z = 800, zscale = 10, textsize = 20, linewidth = 4, text = "Neue Prager Hutte", freetype = FALSE)
 # render_label(elev_matrix, x = xvec(12.345676), y = yvec(47.109409), z = 600, zscale = 10, textsize = 20, linewidth = 4, text = "Grossvenediger", freetype = FALSE)
 
-# Add track and animate ---------------------------------------------------
+# Add track and animate ----
 
 # Plot the route in 3D
 x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
@@ -139,7 +139,7 @@ z <- gpx$ele / 9.45
 
 # Camera movements, borrowed from
 # https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
-phivechalf <- 60 / (1 + exp(seq(-7, 0, length.out = 180) / 2))  # original: 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
+phivechalf <- 60 / (1 + exp(seq(-7, 0, length.out = 180) / 2)) # original: 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
 phivecfull <- c(phivechalf, rev(phivechalf))
 thetavec <- -90 + 60 * sin(seq(0, 359, length.out = 360) * pi / 180)
 zoomvec <- 0.35 + 0.2 * 1 / (1 + exp(seq(-5, 20, length.out = 180)))
@@ -152,19 +152,19 @@ prev_wd <- getwd()
 setwd("Track")
 
 # Initializes the progress bar
-n_iter <- 72  # 36
+n_iter <- 72 # 36
 pb <- txtProgressBar(
   min = 0, # Minimum value of the progress bar
   max = n_iter, # Maximum value of the progress bar
   style = 3, # Progress bar style (also available style = 1 and style = 2)
   width = 50, # Progress bar width. Defaults to getOption("width")
-  char = "="
-) # Character used to create the bar
+  char = "=" # Character used to create the bar
+)
 
 
 n_points <- length(gpx$lat)
 for (i in 1:n_iter) {
-  p_range <- 1:ceiling((n_points / n_iter) * i)  # why this? x[1:ceiling((1555 / 360) * i)]
+  p_range <- 1:ceiling((n_points / n_iter) * i) # get a chunk of track points
   rgl::lines3d(
     x[p_range],
     z[p_range],
@@ -182,12 +182,12 @@ for (i in 1:n_iter) {
   )
   rgl::snapshot3d(paste0(sprintf("%02d.png", i)))
   rgl.pop(id = rgl.ids()$id |> max())
-  
+
   # Sets the progress bar to the current state
   setTxtProgressBar(pb, i)
 }
 
-# To plot the entire track: 
-rgl::lines3d(x, z, -y, color='orange', add=TRUE)
+# To plot the entire track:
+rgl::lines3d(x, z, -y, color = "orange", add = TRUE)
 
 setwd(prev_wd)

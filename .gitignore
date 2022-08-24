@@ -1,11 +1,14 @@
 Track/
 Images/
 
+gpx_files/*
+
 .Rhistory
 .RData
 
 *.gpx
 *.gif
+*.mp4
 
 .env
 

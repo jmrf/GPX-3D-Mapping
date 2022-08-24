@@ -1,4 +1,5 @@
-#' Borrowed from: https://github.com/wcmbishop/rayshader-demo/blob/master/R/map-image-api.R
+#' Borrowed from:
+#' https://github.com/wcmbishop/rayshader-demo/blob/master/R/map-image-api.R
 #'
 #' Download a map image from the ArcGIS REST API
 #'
@@ -8,11 +9,11 @@
 #' @param width image width (pixels)
 #' @param height image height (pixels)
 #' @param sr_bbox Spatial Reference code for bounding box
-#' 
-#' @details This function uses the ArcGIS REST API, specifically the 
+#'
+#' @details This function uses the ArcGIS REST API, specifically the
 #' "Execute Web Map Task" task. You can find links below to a web UI for this
 #' rest endpoint and API documentation.
-#' 
+#'
 #' Web UI: https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task/execute
 #' API docs: https://developers.arcgis.com/rest/services-reference/export-web-map-task.htm
 #'
@@ -24,23 +25,26 @@
 #'   p2 = list(long = -122.354, lat = 37.84)
 #' )
 #' image_size <- define_image_size(bbox, 600)
-#' overlay_file <- get_arcgis_map_image(bbox, width = image_size$width,
-#'                                      height = image_size$height)
-#' 
-get_arcgis_map_image <- function(bbox, map_type = "World_Street_Map", file = NULL, 
+#' overlay_file <- get_arcgis_map_image(bbox,
+#'   width = image_size$width,
+#'   height = image_size$height
+#' )
+#'
+get_arcgis_map_image <- function(bbox, map_type = "World_Street_Map", file = NULL,
                                  width = 400, height = 400, sr_bbox = 4326) {
   require(httr)
-  require(glue) 
+  require(glue)
   require(jsonlite)
-  
+
   url <- parse_url("https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task/execute")
-  
+
   # define JSON query parameter
   web_map_param <- list(
     baseMap = list(
       baseMapLayers = list(
         list(url = jsonlite::unbox(glue("https://services.arcgisonline.com/ArcGIS/rest/services/{map_type}/MapServer",
-                                        map_type = map_type)))
+          map_type = map_type
+        )))
       )
     ),
     exportOptions = list(
@@ -56,22 +60,24 @@ get_arcgis_map_image <- function(bbox, map_type = "World_Street_Map", file = NUL
       )
     )
   )
-  
+
   res <- GET(
-    url, 
+    url,
     query = list(
       f = "json",
       Format = "PNG32",
       Layout_Template = "MAP_ONLY",
-      Web_Map_as_JSON = jsonlite::toJSON(web_map_param))
+      Web_Map_as_JSON = jsonlite::toJSON(web_map_param)
+    )
   )
-  
+
   if (status_code(res) == 200) {
     body <- content(res, type = "application/json")
     message(jsonlite::toJSON(body, auto_unbox = TRUE, pretty = TRUE))
-    if (is.null(file)) 
+    if (is.null(file)) {
       file <- tempfile("overlay_img", fileext = ".png")
-    
+    }
+
     img_res <- GET(body$results[[1]]$value$url)
     img_bin <- content(img_res, "raw")
     writeBin(img_bin, file)
