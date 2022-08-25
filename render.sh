@@ -20,20 +20,24 @@ say() {
 
 INPUT_GPX_FILE=$1
 
-if [ -z "$INPUT_GPX_FILE" ]
+if [ -z "${INPUT_GPX_FILE}" ]
   then
     say @red[["This script expects a gpx file path as first input"]]
     exit 1;
 fi
 
+filename=$(basename -- "$INPUT_GPX_FILE")
+extension="${filename##*.}"
+filename="${filename%.*}"
+
 say @cyan[["Running R script on $INPUT_GPX_FILE"]]
 Rscript 3DMap.R $INPUT_GPX_FILE
 
-say @cyan[["Creating GIF file"]]
-ffmpeg -framerate 5 -y -i "Track/%02d.png" output.gif
+say @cyan[["Creating GIF file '${filename}.gif'..."]]
+ffmpeg -framerate 8 -y -i "Track/%02d.png" "${filename}.gif"
 
-say @cyan[["Creating mp4 video file"]]
-ffmpeg -i output.gif \
+say @cyan[["Creating mp4 video file '${filename}.mp4'"]]
+ffmpeg -i "${filename}.gif" \
   -movflags faststart -pix_fmt yuv420p \
-  -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" output.mp4
+  -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" "${filename}.mp4"
 

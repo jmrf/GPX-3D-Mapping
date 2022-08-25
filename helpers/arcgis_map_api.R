@@ -4,7 +4,7 @@
 #' Download a map image from the ArcGIS REST API
 #'
 #' @param bbox bounding box coordinates (list of 2 points with long/lat values)
-#' @param map_type map type to download - options are World_Street_Map, World_Imagery, World_Topo_Map
+#' @param map_type map type to download - options are 'World_Street_Map', 'World_Imagery' or 'World_Topo_Map'
 #' @param file file path to save to. Default is NULL, which will create a temp file.
 #' @param width image width (pixels)
 #' @param height image height (pixels)

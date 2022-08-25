@@ -12,7 +12,7 @@ source("helpers/arcgis_map_api.R")
 source("helpers/image_size.R")
 
 # Setup and functions ----
-options(rgl.printRglwidget = TRUE)
+options(rgl.printRglwidget = FALSE)
 
 # Convert lat and long to rayshader grid coordinates
 xvec <- function(x) {
@@ -20,10 +20,10 @@ xvec <- function(x) {
   xmin_vec <- rep(xmin, length(gpx$lon))
   (x - xmin_vec[length(x)]) / res(elev_img)[1]
 }
-yvec <- function(x) {
+yvec <- function(y) {
   ymin <- elev_img@extent@ymin
   ymin_vec <- rep(ymin, length(gpx$lat))
-  (x - ymin_vec[length(x)]) / res(elev_img)[2]
+  (y - ymin_vec[length(y)]) / res(elev_img)[2]
 }
 
 
@@ -55,26 +55,31 @@ print("Done reading GPX file!")
 gpx[1:3] <- as.numeric(unlist(gpx[1:3]))
 
 # Find Bounding Box
-lat_min <- min(gpx$lat) * 0.999
-lat_max <- max(gpx$lat) * 1.001
+max_bbox_diff <- max(
+  max(gpx$lat) - min(gpx$lat),
+  max(gpx$lon) - min(gpx$lon)
+)
+
+lat_min <- min(gpx$lat) * 0.9999
+lat_max <- max(gpx$lat) * 1.0001
 long_min <- min(gpx$lon) * 0.999
 long_max <- max(gpx$lon) * 1.001
 
 # Get elevation data of bounding box, borrowed from
 # https://github.com/edeaster/Routes3D/blob/master/3D-map_gps_route.R
-ex.df <- data.frame(
+location.df <- data.frame(
   x = c(long_min, long_max),
   y = c(lat_min, lat_max)
 )
 
 prj_dd <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-elev_img <-
-  get_elev_raster(
-    ex.df,
-    prj = prj_dd,
-    z = 12,
-    clip = "bbox"
-  )
+elev_img <- get_elev_raster(
+  location.df,
+  prj = prj_dd,
+  z = 12,
+  clip = "bbox",
+  src = "aws"
+)
 elev_tif <- raster::writeRaster(elev_img, "Track/elevation.tif", overwrite = TRUE)
 elev_dim <- dim(elev_tif)
 
@@ -95,28 +100,29 @@ bbox <- list(
 image_size <- define_image_size(bbox, 1200)
 overlay_img <- get_arcgis_map_image(
   bbox,
-  map_type = "World_Topo_Map", # World_Imagery
+  map_type = "World_Imagery", # "World_Topo_Map" OR "World_Imagery"
   width = image_size$width,
   height = image_size$height
 ) |> png::readPNG()
 
 # Create the 3D Map ----
 
-# Calculate rayshader layers using elevation data
-ambmat <- ambient_shade(elev_matrix, zscale = 8)
-raymat <- ray_shade(elev_matrix, zscale = 8, lambert = TRUE)
+# # Calculate rayshader layers using elevation data
+# ambmat <- ambient_shade(elev_matrix, zscale = 8)
+# raymat <- ray_shade(elev_matrix, zscale = 8, lambert = TRUE)
 
 # Create RGL object and plot
+zscale <- 10
 rgl::clear3d()
 
 elev_matrix |>
   sphere_shade(texture = "imhof4") |>
   add_overlay(overlay = overlay_img, alphalayer = 0.9) |>
-  add_shadow(raymat, max_darken = 0.5, rescale_original = TRUE) |>
+  # add_shadow(raymat, max_darken = 0.5, rescale_original = TRUE) |>
   # add_shadow(ambmat, max_darken = 0.5, rescale_original = TRUE) |>
   plot_3d(
     elev_matrix,
-    zscale = 10,
+    zscale = zscale,
     zoom = 0.5,
     fov = 70,
     theta = 80,
@@ -124,35 +130,26 @@ elev_matrix |>
     windowsize = c(1850, 1040)
   )
 
-# # Plot labels on the 3D Map
-# render_label(elev_matrix, x = xvec(gpx$lon[1]), y = yvec(gpx$lat[1]), z = 1200, zscale = 10, textsize = 20, linewidth = 4, text = "Start", freetype = FALSE)
-# render_label(elev_matrix, x = xvec(12.495658), y = yvec(47.157745), z = 1200, zscale = 10, textsize = 40, linewidth = 4, text = "St Poltner Hutte", freetype = FALSE)
-# render_label(elev_matrix, x = xvec(12.392638), y = yvec(47.123220), z = 800, zscale = 10, textsize = 20, linewidth = 4, text = "Neue Prager Hutte", freetype = FALSE)
-# render_label(elev_matrix, x = xvec(12.345676), y = yvec(47.109409), z = 600, zscale = 10, textsize = 20, linewidth = 4, text = "Grossvenediger", freetype = FALSE)
 
 # Add track and animate ----
 
-# Plot the route in 3D
-x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
-y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
-z <- gpx$ele / 9.45
-
-# Camera movements, borrowed from
-# https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
-phivechalf <- 60 / (1 + exp(seq(-7, 0, length.out = 180) / 2)) # original: 30 + 60 * 1 / (1 + exp(seq(-7, 20, length.out = 180) / 2))
-phivecfull <- c(phivechalf, rev(phivechalf))
-thetavec <- -90 + 60 * sin(seq(0, 359, length.out = 360) * pi / 180)
-zoomvec <- 0.35 + 0.2 * 1 / (1 + exp(seq(-5, 20, length.out = 180)))
-zoomvecfull <- c(zoomvec, rev(zoomvec))
+# Plot labels on the 3D Map
+render_label(
+  elev_matrix,
+  x = xvec(gpx$lon[-1]), y = yvec(gpx$lat[-1]), z = 1200,
+  zscale = zscale, textsize = 20, linewidth = 4, text = "END", freetype = FALSE
+)
 
 # Progressive track rendering  ------
 dir.create("Track")
-
 prev_wd <- getwd()
 setwd("Track")
 
 # Initializes the progress bar
-n_iter <- 72 # 36
+n_iter <- 72
+n_points <- length(gpx$lat)
+chunk_size <- ceiling(n_points / n_iter)
+
 pb <- txtProgressBar(
   min = 0, # Minimum value of the progress bar
   max = n_iter, # Maximum value of the progress bar
@@ -161,23 +158,45 @@ pb <- txtProgressBar(
   char = "=" # Character used to create the bar
 )
 
+# Camera movements, borrowed from
+# https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
 
-n_points <- length(gpx$lat)
+# Azimuth (anticlockwise) angle:
+phivec <- rep_len(45, length.out = n_iter)
+# Alternatively:
+# phivechalf <- 60 / (1 + exp(seq(-7, 0, length.out = ceiling(n_iter / 2))) / 2)
+# phivec <- c(phivechalf, rev(phivechalf))
+
+# Scene rotation angle:
+# thetavec <- -90 + 60 * sin(seq(0, 359, length.out = n_iter) * pi / 180)
+thetavec <- seq(0, 359, length.out = n_iter) # One entire circle around the scene
+
+# Zoom:
+# Here we use a constant zoom, alternatively:
+# > zoomvechalf <- 0.35 + 0.2 * 1 / (1 + exp(seq(-5, 20, length.out = ceiling(n_iter / 2))))
+# > zoomvec <- c(zoomvechalf, rev(zoomvechalf))
+zoomvec <- rep_len(0.55, length.out = n_iter)
+
+# Get the route 3D points
+x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
+y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
+z <- gpx$ele / (0.99 * zscale)
+
 for (i in 1:n_iter) {
-  p_range <- 1:ceiling((n_points / n_iter) * i) # get a chunk of track points
+  p_range <- 1:(chunk_size * i) # get a chunk of track points
   rgl::lines3d(
     x[p_range],
     z[p_range],
     -y[p_range],
     color = "orange",
     lwd = 4,
-    smooth = T,
-    add = T
+    smooth = TRUE,
+    add = TRUE
   )
   render_camera(
     theta = thetavec[i],
-    phi = phivecfull[i],
-    zoom = zoomvecfull[i],
+    phi = phivec[i],
+    zoom = zoomvec[i],
     fov = 50
   )
   rgl::snapshot3d(paste0(sprintf("%02d.png", i)))
@@ -188,6 +207,6 @@ for (i in 1:n_iter) {
 }
 
 # To plot the entire track:
-rgl::lines3d(x, z, -y, color = "orange", add = TRUE)
+rgl::lines3d(x, z, -y, color = "orange", add = TRUE, lwd = 4)
 
 setwd(prev_wd)
