@@ -43,7 +43,7 @@ lat2y <- function(lat) {
   round(ymax - (lat - lat_min) * r) # in an image (0, 0) is at the top!
 }
 
-add_label <- function(lon, lat, text) {
+add_label <- function(lon, lat, text, color) {
   render_label(
     elev_matrix,
     x = lon2x(lon),
@@ -51,8 +51,8 @@ add_label <- function(lon, lat, text) {
     z = 200,
     zscale = zscale, textsize = 20, linewidth = 4,
     text = text,
-    linecolor = "yellow",
-    textcolor = "yellow",
+    linecolor = color,
+    textcolor = color,
     freetype = FALSE
   )
 }
@@ -164,15 +164,15 @@ elev_matrix |>
 n_points <- length(gpx$lat)
 
 # Start Label
-add_label(gpx$lon[1], gpx$lat[1], "START")
+add_label(gpx$lon[1], gpx$lat[1], "START", "green")
 # End Label
-add_label(gpx$lon[n_points - 1], gpx$lat[n_points - 1], "END")
+add_label(gpx$lon[n_points - 1], gpx$lat[n_points - 1], "END", "blue")
 # Top Label
 top_point <- gpx[gpx$ele == max(gpx$ele),][1,]
-add_label(top_point$lon, top_point$lat, "TOP")
+add_label(top_point$lon, top_point$lat, "TOP", "yellow")
 # Bottom Label
 low_point <- gpx[gpx$ele == min(gpx$ele),][1,]
-add_label(low_point$lon, low_point$lat, "LOW")
+add_label(low_point$lon, low_point$lat, "LOW", "yellow")
 
 
 # Progressive track rendering  ------
@@ -214,7 +214,7 @@ zoomvec <- rep_len(0.55, length.out = n_iter)
 # Get the route 3D points
 x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
 y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
-z <- gpx$ele / (0.98 * zscale)
+z <- gpx$ele / (0.97 * zscale)
 
 for (i in 1:n_iter) {
   p_range <- 1:(chunk_size * i) # get a chunk of track points
