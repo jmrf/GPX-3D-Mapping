@@ -40,7 +40,21 @@ lat2y <- function(lat) {
   lat_min <- elev_img@extent@ymin
   lat_max <- elev_img@extent@ymax
   r <- ymax / (lat_max - lat_min)
-  round(ymax - (lat - lat_min) * r)  # in an image (0, 0) is at the top!
+  round(ymax - (lat - lat_min) * r) # in an image (0, 0) is at the top!
+}
+
+add_label <- function(lon, lat, text) {
+  render_label(
+    elev_matrix,
+    x = lon2x(lon),
+    y = lat2y(lat),
+    z = 200,
+    zscale = zscale, textsize = 20, linewidth = 4,
+    text = text,
+    linecolor = "yellow",
+    textcolor = "yellow",
+    freetype = FALSE
+  )
 }
 
 
@@ -150,26 +164,16 @@ elev_matrix |>
 n_points <- length(gpx$lat)
 
 # Start Label
-render_label(
-  elev_matrix,
-  x = lon2x(gpx$lon[1]), 
-  y = lat2y(gpx$lat[1]), 
-  z = 200,
-  zscale = zscale, textsize = 20, linewidth = 4, 
-  text = "START", 
-  freetype = FALSE
-)
-
+add_label(gpx$lon[1], gpx$lat[1], "START")
 # End Label
-render_label(
-  elev_matrix,
-  x = lon2x(gpx$lon[n_points -1]),
-  y = lat2y(gpx$lat[n_points -1]),
-  z = 200,
-  zscale = zscale, textsize = 20, linewidth = 4,
-  text = "END",
-  freetype = FALSE
-)
+add_label(gpx$lon[n_points - 1], gpx$lat[n_points - 1], "END")
+# Top Label
+top_point <- gpx[gpx$ele == max(gpx$ele),][1,]
+add_label(top_point$lon, top_point$lat, "TOP")
+# Bottom Label
+low_point <- gpx[gpx$ele == min(gpx$ele),][1,]
+add_label(low_point$lon, low_point$lat, "LOW")
+
 
 # Progressive track rendering  ------
 dir.create("Track")
