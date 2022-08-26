@@ -17,15 +17,22 @@ The R scripts r copies or have been inspired by the following repositories:
  any of the scripts in the editor, a message to install the missing libraries
  will pop at the top.
  
- Alternatively, for each of the libraries, in the R console:
- 
- ```bash
- package.install('<name-of-the-package>')  # e.g.: package.install('elevatr')
- ```
+ Alternatively, check the detailed instructions bellow.
  
  > NOTE: Some system wide dependencies might need to be installed. 
  > See any package installation error to determine if any is missing. 
  
+<details>
+  <summary>Show dependencies installation instructions</summary>
+  
+   #### R packages
+   
+   Apart from the libraries listed in the scripts itself, you might need to run:
+   ```bash
+   install.packages(c('sf', 'terra', 'rgdal'))
+   ```
+ 
+ </details>
  
  ### Run
  

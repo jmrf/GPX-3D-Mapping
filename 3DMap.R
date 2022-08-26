@@ -12,7 +12,7 @@ source("helpers/arcgis_map_api.R")
 source("helpers/image_size.R")
 
 # Setup and functions ----
-options(rgl.printRglwidget = FALSE)
+options(rgl.printRglwidget = TRUE)
 
 # Convert lat and long to rayshader grid coordinates
 xvec <- function(x) {
@@ -91,15 +91,15 @@ elev_matrix <- matrix(
 )
 
 # Create Overlay ----
-bbox <- list(
+img_bbox <- list(
   p1 = list(long = long_max, lat = lat_min),
   p2 = list(long = long_min, lat = lat_max)
 )
 
 # Create overlay from satellite image ----
-image_size <- define_image_size(bbox, 1200)
+image_size <- define_image_size(img_bbox, 1200)
 overlay_img <- get_arcgis_map_image(
-  bbox,
+  img_bbox,
   map_type = "World_Imagery", # "World_Topo_Map" OR "World_Imagery"
   width = image_size$width,
   height = image_size$height
