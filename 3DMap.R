@@ -12,18 +12,35 @@ source("helpers/arcgis_map_api.R")
 source("helpers/image_size.R")
 
 # Setup and functions ----
-options(rgl.printRglwidget = TRUE)
+options(rgl.printRglwidget = FALSE)
 
 # Convert lat and long to rayshader grid coordinates
-xvec <- function(x) {
+xvec <- function(lon) {
   xmin <- elev_img@extent@xmin
   xmin_vec <- rep(xmin, length(gpx$lon))
-  (x - xmin_vec[length(x)]) / res(elev_img)[1]
+  (lon - xmin_vec[length(lon)]) / res(elev_img)[1]
 }
-yvec <- function(y) {
+yvec <- function(lat) {
   ymin <- elev_img@extent@ymin
   ymin_vec <- rep(ymin, length(gpx$lat))
-  (y - ymin_vec[length(y)]) / res(elev_img)[2]
+  (lat - ymin_vec[length(lat)]) / res(elev_img)[2]
+}
+
+# Convert lat and on to image pixel coordinates
+lon2x <- function(lon) {
+  xmax <- dim(elev_matrix)[1]
+  lon_min <- elev_img@extent@xmin
+  lon_max <- elev_img@extent@xmax
+  r <- xmax / (lon_max - lon_min)
+  round((lon - lon_min) * r)
+}
+
+lat2y <- function(lat) {
+  ymax <- dim(elev_matrix)[2]
+  lat_min <- elev_img@extent@ymin
+  lat_max <- elev_img@extent@ymax
+  r <- ymax / (lat_max - lat_min)
+  round(ymax - (lat - lat_min) * r)  # in an image (0, 0) is at the top!
 }
 
 
@@ -90,13 +107,12 @@ elev_matrix <- matrix(
   ncol = nrow(elev_img)
 )
 
-# Create Overlay ----
+# # Create overlay from satellite image ----
 img_bbox <- list(
   p1 = list(long = long_max, lat = lat_min),
   p2 = list(long = long_min, lat = lat_max)
 )
 
-# Create overlay from satellite image ----
 image_size <- define_image_size(img_bbox, 1200)
 overlay_img <- get_arcgis_map_image(
   img_bbox,
@@ -130,14 +146,29 @@ elev_matrix |>
     windowsize = c(1850, 1040)
   )
 
+# Plot labels on the 3D Map ----
+n_points <- length(gpx$lat)
 
-# Add track and animate ----
-
-# Plot labels on the 3D Map
+# Start Label
 render_label(
   elev_matrix,
-  x = xvec(gpx$lon[-1]), y = yvec(gpx$lat[-1]), z = 1200,
-  zscale = zscale, textsize = 20, linewidth = 4, text = "END", freetype = FALSE
+  x = lon2x(gpx$lon[1]), 
+  y = lat2y(gpx$lat[1]), 
+  z = 200,
+  zscale = zscale, textsize = 20, linewidth = 4, 
+  text = "START", 
+  freetype = FALSE
+)
+
+# End Label
+render_label(
+  elev_matrix,
+  x = lon2x(gpx$lon[n_points -1]),
+  y = lat2y(gpx$lat[n_points -1]),
+  z = 200,
+  zscale = zscale, textsize = 20, linewidth = 4,
+  text = "END",
+  freetype = FALSE
 )
 
 # Progressive track rendering  ------
@@ -146,8 +177,7 @@ prev_wd <- getwd()
 setwd("Track")
 
 # Initializes the progress bar
-n_iter <- 72
-n_points <- length(gpx$lat)
+n_iter <- 120
 chunk_size <- ceiling(n_points / n_iter)
 
 pb <- txtProgressBar(
@@ -162,7 +192,7 @@ pb <- txtProgressBar(
 # https://www.rdocumentation.org/packages/rayshader/versions/0.11.5/topics/render_movie
 
 # Azimuth (anticlockwise) angle:
-phivec <- rep_len(45, length.out = n_iter)
+phivec <- rep_len(60, length.out = n_iter)
 # Alternatively:
 # phivechalf <- 60 / (1 + exp(seq(-7, 0, length.out = ceiling(n_iter / 2))) / 2)
 # phivec <- c(phivechalf, rev(phivechalf))
@@ -180,7 +210,7 @@ zoomvec <- rep_len(0.55, length.out = n_iter)
 # Get the route 3D points
 x <- xvec(gpx$lon) - dim(elev_matrix)[1] / 2
 y <- yvec(gpx$lat) - dim(elev_matrix)[2] / 2
-z <- gpx$ele / (0.99 * zscale)
+z <- gpx$ele / (0.98 * zscale)
 
 for (i in 1:n_iter) {
   p_range <- 1:(chunk_size * i) # get a chunk of track points

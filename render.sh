@@ -34,11 +34,11 @@ say @cyan[["Running R script on $INPUT_GPX_FILE"]]
 Rscript 3DMap.R $INPUT_GPX_FILE
 
 mkdir -p output
-say @cyan[["Creating GIF file '${filename}.gif'..."]]
+say @cyan[["Creating GIF file 'output/${filename}.gif'..."]]
 ffmpeg -framerate 8 -y -i "Track/%02d.png" "output/${filename}.gif"
 
-say @cyan[["Creating mp4 video file '${filename}.mp4'"]]
-ffmpeg -i "${filename}.gif" \
+say @cyan[["Creating mp4 video file 'output/${filename}.mp4'"]]
+ffmpeg -i "output/${filename}.gif" \
   -movflags faststart -pix_fmt yuv420p \
   -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" "output/${filename}.mp4"
 
